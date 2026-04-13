@@ -151,10 +151,10 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       userId: member.id,
       guildId: guild.id,
       createdAt: new Date().toISOString(),
-      status: 'open',
+      status: 'Nyitva',
       claimedBy: null,
       priority: priority || 'none',
-      reason,
+      indok,
     };
     
     await saveTicketData(guild.id, channel.id, ticketData);
@@ -166,7 +166,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       description: `${member.toString()}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
       color: priorityInfo.color,
       fields: [
-        { name: 'Status', value: '🟢 Open', inline: true },
+        { name: 'Status', value: '🟢 Nyitva', inline: true },
         { name: 'Claimed By', value: 'Not claimed', inline: true },
         { name: 'Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
       ],
@@ -174,18 +174,18 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId('ticket_close')
-        .setLabel('Close Ticket')
+        .setCustomId('Close_Ticket')
+        .setLabel('Jegy Zárása')
         .setStyle(ButtonStyle.Danger)
         .setEmoji('🔒'),
       new ButtonBuilder()
-        .setCustomId('ticket_claim')
+        .setCustomId('Jegy feldolgozása')
         .setLabel('Claim')
         .setStyle(ButtonStyle.Primary)
         .setEmoji('🙋'),
       new ButtonBuilder()
         .setCustomId('ticket_transcript')
-        .setLabel('Transcript')
+        .setLabel('Átirat')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('📜')
     );
