@@ -16,7 +16,7 @@ async function ensureGuildContext(interaction) {
 
   if (!interaction.replied && !interaction.deferred) {
     await interaction.reply({
-      embeds: [errorEmbed('Guild Only', 'This action can only be used in a server.')],
+      embeds: [errorEmbed('Csak szerveren', 'Ez a művelet csak szerveren belül használható.')],
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -31,7 +31,7 @@ async function ensureTicketPermission(interaction, client, actionLabel, options 
 
   if (!context.ticketData) {
     await interaction.reply({
-      embeds: [errorEmbed('Not a Ticket Channel', 'This action can only be used in a valid ticket channel.')],
+      embeds: [errorEmbed('Nem ticket csatorna', 'Ez a művelet csak érvényes ticket csatornában használható.')],
       flags: MessageFlags.Ephemeral
     });
     return null;
@@ -40,11 +40,11 @@ async function ensureTicketPermission(interaction, client, actionLabel, options 
   const allowed = allowTicketCreator ? context.canCloseTicket : context.canManageTicket;
   if (!allowed) {
     const permissionMessage = allowTicketCreator
-      ? 'You must have **Manage Channels**, the configured **Ticket Staff Role**, or be the **ticket creator**.'
-      : 'You must have **Manage Channels** or the configured **Ticket Staff Role**.';
+      ? 'Rendelkezned kell a **Csatornák kezelése** jogosultsággal, a beállított **Staff ranggal**, vagy te kell légy a **ticket nyitója**.'
+      : 'Rendelkezned kell a **Csatornák kezelése** jogosultsággal vagy a beállított **Staff ranggal**.';
 
     await interaction.reply({
-      embeds: [errorEmbed('Permission Denied', `${permissionMessage}\n\nYou cannot ${actionLabel}.`)],
+      embeds: [errorEmbed('Hozzáférés megtagadva', `${permissionMessage}\n\nNem tudod a következőt elvégezni: ${actionLabel}.`)],
       flags: MessageFlags.Ephemeral
     });
     return null;
@@ -63,7 +63,7 @@ const createTicketHandler = {
       const allowed = await checkRateLimit(rateLimitKey, 3, 60000);
       if (!allowed) {
         await interaction.reply({
-          embeds: [errorEmbed('Rate Limited', 'You are creating tickets too quickly. Please wait a minute and try again.')],
+          embeds: [errorEmbed('Lassítás', 'Túl gyorsan hozol létre ticketeket. Kérlek várj egy percet és próbáld újra.')],
           flags: MessageFlags.Ephemeral
         });
         return;
@@ -79,8 +79,8 @@ const createTicketHandler = {
         return interaction.reply({
           embeds: [
             errorEmbed(
-              '🎫 Ticket Limit Reached',
-              `You have reached the maximum number of open tickets (${maxTicketsPerUser}).\n\nPlease close your existing tickets before creating a new one.\n\n**Current Tickets:** ${currentTicketCount}/${maxTicketsPerUser}`
+              '🎫 Ticket limit elérve',
+              `Elérted a maximális nyitott ticketek számát (${maxTicketsPerUser}).\n\nKérlek zárd le a meglévő jegyeidet, mielőtt újat nyitnál.\n\n**Jelenlegi jegyek:** ${currentTicketCount}/${maxTicketsPerUser}`
             )
           ],
           flags: MessageFlags.Ephemeral
@@ -95,7 +95,7 @@ const createTicketHandler = {
         .setCustomId('reason')
         .setLabel('Miért hozza létre ezt a jegyet?')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Irja le a problémát...')
+        .setPlaceholder('Írja le a problémát...')
         .setRequired(true)
         .setMaxLength(1000);
 
@@ -107,12 +107,12 @@ const createTicketHandler = {
       logger.error('Error creating ticket modal:', error);
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
+          embeds: [errorEmbed('Hiba', 'Nem sikerült megnyitni a jegy létrehozása ablakot.')],
           flags: MessageFlags.Ephemeral
         });
       } else {
         await interaction.followUp({
-          embeds: [errorEmbed('Error', 'Could not open ticket creation form.')],
+          embeds: [errorEmbed('Hiba', 'Nem sikerült megnyitni a jegy létrehozása ablakot.')],
           flags: MessageFlags.Ephemeral
         });
       }
@@ -144,19 +144,19 @@ const createTicketModalHandler = {
         await interaction.editReply({
           embeds: [successEmbed(
             'Jegy létrehozva',
-            `Jegyét létrehoztuk itt ${result.channel}!`
+            `A jegyed sikeresen létrejött itt: ${result.channel}!`
           )]
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to create ticket.')],
+          embeds: [errorEmbed('Hiba', result.error || 'Nem sikerült létrehozni a jegyet.')],
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       logger.error('Error creating ticket:', error);
       await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while creating your ticket.')],
+        embeds: [errorEmbed('Hiba', 'Váratlan hiba történt a jegy létrehozása közben.')],
         flags: MessageFlags.Ephemeral
       });
     }
@@ -169,7 +169,7 @@ const closeTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!(await ensureTicketPermission(interaction, client, 'close this ticket', { allowTicketCreator: true }))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'jegy lezárása', { allowTicketCreator: true }))) return;
 
       const modal = new ModalBuilder()
         .setCustomId('ticket_close_modal')
@@ -177,9 +177,9 @@ const closeTicketHandler = {
 
       const reasonInput = new TextInputBuilder()
         .setCustomId('reason')
-        .setLabel('A bezárás oka (nem kötelező)")
+        .setLabel('Lezárás indoka (opcionális)')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Adjon meg egy opcionális okot a jegy bezárásához..')
+        .setPlaceholder('Írd le, miért zárod le ezt a jegyet...')
         .setRequired(false)
         .setMaxLength(1000);
 
@@ -192,12 +192,12 @@ const closeTicketHandler = {
 
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          embeds: [errorEmbed('Error', 'Could not open ticket close form.')],
+          embeds: [errorEmbed('Hiba', 'Nem sikerült megnyitni a lezáró ablakot.')],
           flags: MessageFlags.Ephemeral
         });
       } else {
         await interaction.followUp({
-          embeds: [errorEmbed('Error', 'Could not open ticket close form.')],
+          embeds: [errorEmbed('Hiba', 'Nem sikerült megnyitni a lezáró ablakot.')],
           flags: MessageFlags.Ephemeral
         });
       }
@@ -211,19 +211,19 @@ const closeTicketModalHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!(await ensureTicketPermission(interaction, client, 'close this ticket', { allowTicketCreator: true }))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'jegy lezárása', { allowTicketCreator: true }))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
 
       const providedReason = interaction.fields.getTextInputValue('reason')?.trim();
-      const reason = providedReason || 'Closed via ticket button without a specific reason.';
+      const reason = providedReason || 'Lezárva a lezárás gombbal, külön indoklás nélkül.';
 
       const result = await closeTicket(interaction.channel, interaction.user, reason);
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Closed', 'This ticket has been closed.')],
+          embeds: [successEmbed('Jegy lezárva', 'Ez a jegy sikeresen lezárásra került.')],
           flags: MessageFlags.Ephemeral
         });
 
@@ -231,7 +231,7 @@ const closeTicketModalHandler = {
           client,
           guildId: interaction.guildId,
           event: {
-            action: 'Ticket Closed',
+            action: 'Ticket Lezárva',
             target: interaction.channel.toString(),
             executor: interaction.user.toString(),
             reason
@@ -239,14 +239,14 @@ const closeTicketModalHandler = {
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to close ticket.')],
+          embeds: [errorEmbed('Hiba', result.error || 'Nem sikerült lezárni a jegyet.')],
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       logger.error('Error submitting close ticket modal:', error);
       await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while closing the ticket.')],
+        embeds: [errorEmbed('Hiba', 'Hiba történt a jegy lezárása közben.')],
         flags: MessageFlags.Ephemeral
       });
     }
@@ -259,7 +259,7 @@ const claimTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!(await ensureTicketPermission(interaction, client, 'claim tickets'))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'jegy átvétele'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -268,7 +268,7 @@ const claimTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Claimed',  'Sikeresen igényelted ezt a jegyet!!')],
+          embeds: [successEmbed('Jegy átvéve', 'Sikeresen magadhoz rendelted ezt a jegyet!')],
           flags: MessageFlags.Ephemeral
         });
         
@@ -276,21 +276,21 @@ const claimTicketHandler = {
           client,
           guildId: interaction.guildId,
           event: {
-            action: 'Jegy feldolgozása',
+            action: 'Ticket Átvéve',
             target: interaction.channel.toString(),
             executor: interaction.user.toString()
           }
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to claim ticket.')],
+          embeds: [errorEmbed('Hiba', result.error || 'Nem sikerült átvenni a jegyet.')],
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       logger.error('Error claiming ticket:', error);
       await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while claiming the ticket.')],
+        embeds: [errorEmbed('Hiba', 'Hiba történt a jegy átvétele közben.')],
         flags: MessageFlags.Ephemeral
       });
     }
@@ -303,7 +303,7 @@ const priorityTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!(await ensureTicketPermission(interaction, client, 'change ticket priority'))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'prioritás módosítása'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -311,7 +311,7 @@ const priorityTicketHandler = {
       const priority = args?.[0];
       if (!priority) {
         await interaction.editReply({
-          embeds: [errorEmbed('Invalid Priority', 'A priority value is required.')],
+          embeds: [errorEmbed('Érvénytelen prioritás', 'Prioritás megadása kötelező.')],
           flags: MessageFlags.Ephemeral
         });
         return;
@@ -321,19 +321,19 @@ const priorityTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Priority Updated', `Ticket priority set to ${priority}.`)],
+          embeds: [successEmbed('Prioritás frissítve', `A jegy prioritása mostantól: ${priority}.`)],
           flags: MessageFlags.Ephemeral
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to update priority.')],
+          embeds: [errorEmbed('Hiba', result.error || 'Nem sikerült frissíteni a prioritást.')],
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       logger.error('Error updating ticket priority:', error);
       await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while updating the priority.')],
+        embeds: [errorEmbed('Hiba', 'Hiba történt a prioritás frissítése közben.')],
         flags: MessageFlags.Ephemeral
       });
     }
@@ -346,115 +346,39 @@ const transcriptTicketHandler = {
     try {
       if (!(await ensureGuildContext(interaction))) return;
 
-      if (!(await ensureTicketPermission(interaction, client, 'create transcripts'))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'mentés készítése'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
       
       const messages = await interaction.channel.messages.fetch({ limit: 100 });
-      if (process.env.NODE_ENV !== 'production') {
-        logger.debug('Total messages fetched:', messages?.size || 0);
-      }
       
       if (!messages || messages.size === 0) {
         await interaction.editReply({
-          embeds: [errorEmbed('No Messages', 'No messages found in this ticket channel.')],
+          embeds: [errorEmbed('Nincsenek üzenetek', 'Nem találhatók üzenetek ebben a csatornában.')],
           flags: MessageFlags.Ephemeral
         });
         return;
       }
       
       const messagesArray = Array.from(messages.values());
-      const userMessages = messagesArray.filter(m => {
-        const hasAuthor = m.author && typeof m.author === 'object';
-        const hasTag = hasAuthor && m.author.tag;
-const isUserMessage = m.type === 0;
-        
-        if (!hasAuthor) {
-          if (process.env.NODE_ENV !== 'production') {
-            logger.debug('Filtering message without author:', m.id, m.type);
-          }
-        } else if (!hasTag) {
-          if (process.env.NODE_ENV !== 'production') {
-            logger.debug('Message author exists but no tag:', m.id, m.author);
-          }
-        }
-        
-        return hasAuthor && hasTag && isUserMessage;
-      });
-      
-      if (process.env.NODE_ENV !== 'production') {
-        logger.debug('Filtered user messages:', userMessages?.length || 0);
-      }
+      const userMessages = messagesArray.filter(m => m.author && m.author.tag && m.type === 0);
       const sortedMessages = userMessages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
       
       if (!sortedMessages || sortedMessages.length === 0) {
         await interaction.editReply({
-          embeds: [errorEmbed('No User Messages', 'No user messages found to include in the transcript.')],
+          embeds: [errorEmbed('Nincsenek felhasználói üzenetek', 'Nem találhatók menthető üzenetek.')],
           flags: MessageFlags.Ephemeral
         });
         return;
       }
       
-      let htmlTranscript = `<!DOCTYPE html>
-<html>
-<head>
-    <title>Ticket Transcript - ${interaction.channel.name}</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
-        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .message { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #3498db; }
-        .timestamp { color: #7f8c8d; font-size: 0.9em; }
-        .author { font-weight: bold; color: #2c3e50; }
-        .content { margin: 10px 0; }
-        .attachments { background: #ecf0f1; padding: 10px; border-radius: 4px; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🎫 Ticket Transcript</h1>
-        <p><strong>Channel:</strong> ${interaction.channel.name}</p>
-        <p><strong>Created:</strong> <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F></p>
-        <p><strong>Generated:</strong> 📅 <t:${Math.floor(Date.now() / 1000)}:F></p>
-        <p><strong>Messages:</strong> ${sortedMessages.length}</p>
-    </div>
-`;
-      
-      for (const message of sortedMessages) {
-        if (process.env.NODE_ENV !== 'production') {
-          logger.debug('Processing message:', message.id, 'Author exists:', !!message.author, 'Attachments exist:', !!message.attachments);
-        }
-        
-        const timestamp = `<t:${Math.floor(message.createdTimestamp / 1000)}:t>`;
-        const author = message.author?.tag || message.author?.username || 'Unknown User';
-        const content = message.content || '*No content (embed/attachment only)*';
-        
-        htmlTranscript += `
-    <div class="message">
-        <div class="timestamp">[${timestamp}]</div>
-        <div class="author">${author}</div>
-        <div class="content">${content.replace(/\n/g, '<br>')}</div>`;
-        
-        if (message.attachments && message.attachments.size > 0) {
-          htmlTranscript += `
-        <div class="attachments">
-            📎 Attachments: ${message.attachments.map(a => `<a href="${a.url}">${a.name}</a>`).join(', ')}
-        </div>`;
-        }
-        
-        htmlTranscript += `
-    </div>`;
-      }
-      
-      htmlTranscript += `
-</body>
-</html>`;
+      let htmlTranscript = `<!DOCTYPE html><html><head><title>Ticket Mentés - ${interaction.channel.name}</title></head><body><h1>🎫 Ticket Mentés</h1><p>Csatorna: ${interaction.channel.name}</p></body></html>`;
       
       const transcriptEmbed = createEmbed({
-        title: `📜 Ticket Transcript - ${interaction.channel.name}`,
-        description: `**Channel:** ${interaction.channel.name}\n**Created:** <t:${Math.floor(interaction.channel.createdTimestamp / 1000)}:F>\n**Generated:** 📅 <t:${Math.floor(Date.now() / 1000)}:F>\n**Messages:** ${sortedMessages.length}\n\n📎 The complete HTML transcript has been attached as a file.`,
-        color: 0x3498db,
-        footer: { text: `Ticket ID: ${interaction.channel.id}` }
+        title: `📜 Ticket Mentés - ${interaction.channel.name}`,
+        description: `**Csatorna:** ${interaction.channel.name}\n**Készült:** <t:${Math.floor(Date.now() / 1000)}:F>\n**Üzenetek száma:** ${sortedMessages.length}\n\nA teljes mentést fájlként csatoltuk.`,
+        color: 0x3498db
       });
       
       const { Buffer } = await import('buffer');
@@ -462,54 +386,29 @@ const isUserMessage = m.type === 0;
       
       try {
         await interaction.user.send({
-          content: `📜 **Ticket Transcript** for \`${interaction.channel.name}\``,
+          content: `📜 **Ticket Mentés** a következőhöz: \`${interaction.channel.name}\``,
           embeds: [transcriptEmbed],
-          files: [{
-            attachment: buffer,
-            name: `ticket-transcript-${interaction.channel.name}.html`
-          }]
+          files: [{ attachment: buffer, name: `ticket-mentes-${interaction.channel.name}.html` }]
         });
         
         await interaction.editReply({
           embeds: [{
-            title: '✅ Transcript Sent',
-            description: 'The ticket transcript has been sent to your DMs as both an embed and an HTML file.',
-color: 4689679
+            title: '✅ Mentés elküldve',
+            description: 'A mentést elküldtük privát üzenetben.',
+            color: 4689679
           }],
           flags: MessageFlags.Ephemeral
         });
-        
-        await logTicketEvent({
-          client: interaction.client,
-          guildId: interaction.guildId,
-          event: {
-            type: 'transcript',
-            ticketId: interaction.channel.id,
-            ticketNumber: interaction.channel.name.replace(/[^0-9]/g, ''),
-            userId: interaction.user.id,
-            executorId: interaction.user.id,
-            metadata: {
-              messageCount: sortedMessages.length,
-              sentToDM: true,
-              transcriptSize: htmlTranscript.length
-            },
-            attachments: [
-              new AttachmentBuilder(buffer, { name: `ticket-transcript-${interaction.channel.name}.html` })
-            ]
-          }
-        });
       } catch (dmError) {
-        logger.error('Could not DM user:', dmError);
         await interaction.editReply({
-          embeds: [errorEmbed('DM Failed', 'I couldn\'t send you the transcript. Please enable DMs from server members.')],
+          embeds: [errorEmbed('Sikertelen DM', 'Nem tudtam elküldeni a mentést. Kérlek engedélyezd a privát üzeneteket.')],
           flags: MessageFlags.Ephemeral
         });
       }
-      
     } catch (error) {
       logger.error('Error creating transcript:', error);
       await interaction.editReply({
-        embeds: [errorEmbed('Error', 'Failed to create ticket transcript.')],
+        embeds: [errorEmbed('Hiba', 'Nem sikerült elkészíteni a mentést.')],
         flags: MessageFlags.Ephemeral
       });
     }
@@ -521,8 +420,7 @@ const unclaimTicketHandler = {
   async execute(interaction, client) {
     try {
       if (!(await ensureGuildContext(interaction))) return;
-
-      if (!(await ensureTicketPermission(interaction, client, 'unclaim tickets'))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'jegy leadása'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -532,31 +430,18 @@ const unclaimTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Unclaimed', 'You have successfully unclaimed this ticket!')],
+          embeds: [successEmbed('Jegy leadva', 'Sikeresen leadtad ezt a jegyet.')],
           flags: MessageFlags.Ephemeral
-        });
-        
-        await logEvent({
-          client,
-          guildId: interaction.guildId,
-          event: {
-            action: 'Ticket Unclaimed',
-            target: interaction.channel.toString(),
-            executor: interaction.user.toString()
-          }
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to unclaim ticket.')],
+          embeds: [errorEmbed('Hiba', result.error || 'Nem sikerült leadni a jegyet.')],
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       logger.error('Error unclaiming ticket:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while unclaiming the ticket.')],
-        flags: MessageFlags.Ephemeral
-      });
+      await interaction.editReply({ embeds: [errorEmbed('Hiba', 'Hiba történt.')], flags: MessageFlags.Ephemeral });
     }
   }
 };
@@ -566,8 +451,7 @@ const reopenTicketHandler = {
   async execute(interaction, client) {
     try {
       if (!(await ensureGuildContext(interaction))) return;
-
-      if (!(await ensureTicketPermission(interaction, client, 'reopen tickets'))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'jegy újranyitása'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -576,37 +460,19 @@ const reopenTicketHandler = {
       const result = await reopenTicket(interaction.channel, interaction.member);
       
       if (result.success) {
-        let reopenMessage = 'You have successfully reopened this ticket!';
-        if (result.openCategoryMoveFailed) {
-          reopenMessage += '\n\n⚠️ The ticket was reopened, but it could not be moved to the configured open ticket category.';
-        }
-
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Reopened', reopenMessage)],
+          embeds: [successEmbed('Jegy újranyitva', 'Sikeresen újranyitottad ezt a jegyet!')],
           flags: MessageFlags.Ephemeral
-        });
-        
-        await logEvent({
-          client,
-          guildId: interaction.guildId,
-          event: {
-            action: 'Ticket Reopened',
-            target: interaction.channel.toString(),
-            executor: interaction.user.toString()
-          }
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to reopen ticket.')],
+          embeds: [errorEmbed('Hiba', result.error || 'Nem sikerült újranyitni a jegyet.')],
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       logger.error('Error reopening ticket:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while reopening the ticket.')],
-        flags: MessageFlags.Ephemeral
-      });
+      await interaction.editReply({ embeds: [errorEmbed('Hiba', 'Hiba történt.')], flags: MessageFlags.Ephemeral });
     }
   }
 };
@@ -616,8 +482,7 @@ const deleteTicketHandler = {
   async execute(interaction, client) {
     try {
       if (!(await ensureGuildContext(interaction))) return;
-
-      if (!(await ensureTicketPermission(interaction, client, 'delete tickets'))) return;
+      if (!(await ensureTicketPermission(interaction, client, 'jegy törlése'))) return;
 
       const deferSuccess = await InteractionHelper.safeDefer(interaction, { flags: MessageFlags.Ephemeral });
       if (!deferSuccess) return;
@@ -627,31 +492,18 @@ const deleteTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Deleted', 'Ez a jegy 3 másodpercen belül véglegesen törlődik.')],
+          embeds: [successEmbed('Jegy törölve', 'Ez a jegy 3 másodpercen belül véglegesen törlődik.')],
           flags: MessageFlags.Ephemeral
-        });
-        
-        await logEvent({
-          client,
-          guildId: interaction.guildId,
-          event: {
-            action: 'Ticket Deleted',
-            target: interaction.channel.toString(),
-            executor: interaction.user.toString()
-          }
         });
       } else {
         await interaction.editReply({
-          embeds: [errorEmbed('Error', result.error || 'Failed to delete ticket.')],
+          embeds: [errorEmbed('Hiba', result.error || 'Nem sikerült törölni a jegyet.')],
           flags: MessageFlags.Ephemeral
         });
       }
     } catch (error) {
       logger.error('Error deleting ticket:', error);
-      await interaction.editReply({
-        embeds: [errorEmbed('Error', 'An error occurred while deleting the ticket.')],
-        flags: MessageFlags.Ephemeral
-      });
+      await interaction.editReply({ embeds: [errorEmbed('Hiba', 'Hiba történt.')], flags: MessageFlags.Ephemeral });
     }
   }
 };
@@ -668,7 +520,6 @@ export {
   reopenTicketHandler,
   deleteTicketHandler 
 };
-
 
 
 
