@@ -627,7 +627,7 @@ const deleteTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Deleted', 'This ticket will be permanently deleted in 3 seconds.')],
+          embeds: [successEmbed('Ticket Deleted', 'Ez a jegy 3 másodpercen belül véglegesen törlődik.')],
           flags: MessageFlags.Ephemeral
         });
         
