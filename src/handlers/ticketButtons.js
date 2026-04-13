@@ -206,7 +206,7 @@ const closeTicketModalHandler = {
 
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Closed', 'This ticket has been successfully closed.')],
+          embeds: [successEmbed('Jegy Zárás', 'Ezt a jegyet sikeresen lezártuk.')],
           flags: MessageFlags.Ephemeral
         });
       } else {
@@ -265,7 +265,7 @@ const priorityTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Priority Updated', `Ticket priority has been set to ${priority}.`)],
+          embeds: [successEmbed('Prioritás frissítve', `A jegyek prioritása értékre lett állítva. ${priority}.`)],
           flags: MessageFlags.Ephemeral
         });
       } else {
@@ -292,7 +292,7 @@ const transcriptTicketHandler = {
       
       // Transcript logic would go here
       await interaction.editReply({
-        embeds: [successEmbed('Transcript Created', 'Ticket transcript has been generated.')],
+        embeds: [successEmbed('Átirat létrehozva', 'A jegy átirata elkészült.')],
         flags: MessageFlags.Ephemeral
       });
     } catch (error) {
@@ -316,7 +316,7 @@ const unclaimTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Unclaimed', 'You have successfully unclaimed this ticket.')],
+          embeds: [successEmbed('Átirat létrehozva', 'Sikeresen vissza vontad ezt a jegyet')],
           flags: MessageFlags.Ephemeral
         });
       } else {
