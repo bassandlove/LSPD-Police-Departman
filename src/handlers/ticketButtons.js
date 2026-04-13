@@ -143,8 +143,8 @@ const createTicketModalHandler = {
       if (result.success) {
         await interaction.editReply({
           embeds: [successEmbed(
-            'Ticket Created',
-            `Your ticket has been created in ${result.channel}!`
+            'Jegy létrehozva',
+            `Jegyét létrehoztuk itt ${result.channel}!`
           )]
         });
       } else {
@@ -173,13 +173,13 @@ const closeTicketHandler = {
 
       const modal = new ModalBuilder()
         .setCustomId('ticket_close_modal')
-        .setTitle('Close Ticket');
+        .setTitle('Jegy lezárása');
 
       const reasonInput = new TextInputBuilder()
         .setCustomId('reason')
-        .setLabel('Reason for closing (optional)')
+        .setLabel('A bezárás oka (nem kötelező)")
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Add an optional reason for closing this ticket...')
+        .setPlaceholder('Adjon meg egy opcionális okot a jegy bezárásához..')
         .setRequired(false)
         .setMaxLength(1000);
 
@@ -268,7 +268,7 @@ const claimTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Claimed', 'You have successfully claimed this ticket!')],
+          embeds: [successEmbed('Ticket Claimed',  'Sikeresen igényelted ezt a jegyet!!')],
           flags: MessageFlags.Ephemeral
         });
         
@@ -276,7 +276,7 @@ const claimTicketHandler = {
           client,
           guildId: interaction.guildId,
           event: {
-            action: 'Ticket Claimed',
+            action: 'Jegy feldolgozása',
             target: interaction.channel.toString(),
             executor: interaction.user.toString()
           }
