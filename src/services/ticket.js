@@ -14,18 +14,13 @@ import { logTicketEvent } from '../utils/ticketLogging.js';
 import { BotConfig } from '../config/bot.js';
 import { ensureTypedServiceError } from '../utils/serviceErrorBoundary.js';
 
-
-
-
-
-
 function getPriorityMap() {
   const priorities = BotConfig.tickets?.priorities || {
-    none: { emoji: "⚪", color: "#95A5A6", label: "None" },
-    low: { emoji: "🟢", color: "#2ECC71", label: "Low" },
-    medium: { emoji: "🟡", color: "#F1C40F", label: "Medium" },
-    high: { emoji: "🔴", color: "#E74C3C", label: "High" },
-    urgent: { emoji: "🚨", color: "#E91E63", label: "Urgent" },
+    none: { emoji: "⚪", color: "#95A5A6", label: "Nincs" },
+    low: { emoji: "🟢", color: "#2ECC71", label: "Alacsony" },
+    medium: { emoji: "🟡", color: "#F1C40F", label: "Közepes" },
+    high: { emoji: "🔴", color: "#E74C3C", label: "Magas" },
+    urgent: { emoji: "🚨", color: "#E91E63", label: "Sürgős" },
   };
   
   const map = {};
@@ -46,9 +41,6 @@ const TICKET_DELETE_DELAY_SECONDS = Math.floor(TICKET_DELETE_DELAY_MS / 1000);
 const TICKET_NUMBER_BASE = 100;
 const TICKET_NUMBER_RANGE = 900;
 
-
-
-
 export async function getUserTicketCount(guildId, userId) {
   try {
     return await getOpenTicketCountForUser(guildId, userId);
@@ -57,10 +49,10 @@ export async function getUserTicketCount(guildId, userId) {
       service: 'ticketService',
       operation: 'getUserTicketCount',
       message: 'Ticket operation failed: getUserTicketCount',
-      userMessage: 'Failed to count open tickets.',
+      userMessage: 'Nem sikerült megszámolni a nyitott jegyeket.',
       context: { guildId, userId }
     });
-    logger.error('Error counting user tickets:', {
+    logger.error('Hiba a felhasználói jegyek számolásakor:', {
       guildId,
       userId,
       error: typedError.message,
@@ -70,7 +62,7 @@ export async function getUserTicketCount(guildId, userId) {
   }
 }
 
-export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'none') {
+export async function createTicket(guild, member, categoryId, reason = 'Nem lett megadva indok', priority = 'none') {
   try {
     const config = await getGuildConfig(guild.client, guild.id);
     const ticketConfig = config.tickets || {};
@@ -81,7 +73,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     if (currentTicketCount >= maxTicketsPerUser) {
       return {
         success: false,
-        error: `You have reached the maximum number of open tickets (${maxTicketsPerUser}). Please close your existing tickets before creating a new one.`
+        error: `Elérted a maximálisan nyitható jegyek számát (${maxTicketsPerUser}). Kérlek, zárd be a meglévő jegyeidet, mielőtt újat nyitnál.`
       };
     }
     
@@ -94,7 +86,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     
     if (!category && !categoryId) {
       category = await guild.channels.create({
-        name: 'Tickets',
+        name: 'Jegyek',
         type: ChannelType.GuildCategory,
         permissionOverwrites: [
           {
@@ -107,7 +99,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     
     const ticketNumber = await getNextTicketNumber(guild.id);
     
-    let channelName = `ticket-${ticketNumber}`;
+    let channelName = `jegy-${ticketNumber}`;
     
     if (priority !== 'none') {
       const priorityInfo = PRIORITY_MAP[priority];
@@ -151,10 +143,10 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       userId: member.id,
       guildId: guild.id,
       createdAt: new Date().toISOString(),
-      status: 'Nyitva',
+      status: 'open',
       claimedBy: null,
       priority: priority || 'none',
-      indok,
+      reason: reason,
     };
     
     await saveTicketData(guild.id, channel.id, ticketData);
@@ -162,25 +154,25 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     const priorityInfo = PRIORITY_MAP[priority] || PRIORITY_MAP.none;
     
     const embed = createEmbed({
-      title: `Ticket #${ticketNumber}`,
-      description: `${member.toString()}, thanks for creating a ticket!\n\n**Reason:** ${reason}\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
+      title: `Jegy #${ticketNumber}`,
+      description: `${member.toString()}, köszönjük, hogy nyitottál egy jegyet!\n\n**Indok:** ${reason}\n**Prioritás:** ${priorityInfo.emoji} ${priorityInfo.label}`,
       color: priorityInfo.color,
       fields: [
-        { name: 'Status', value: '🟢 Nyitva', inline: true },
-        { name: 'Claimed By', value: 'Not claimed', inline: true },
-        { name: 'Created', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
+        { name: 'Státusz', value: '🟢 Nyitva', inline: true },
+        { name: 'Feldolgozza', value: 'Nincs kiosztva', inline: true },
+        { name: 'Létrehozva', value: `<t:${Math.floor(Date.now() / 1000)}:R>`, inline: true },
       ],
     });
     
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
-        .setCustomId('Close_Ticket')
+        .setCustomId('ticket_close')
         .setLabel('Jegy Zárása')
         .setStyle(ButtonStyle.Danger)
         .setEmoji('🔒'),
       new ButtonBuilder()
-        .setCustomId('Jegy feldolgozása')
-        .setLabel('Claim')
+        .setCustomId('ticket_claim')
+        .setLabel('Feldolgozás')
         .setStyle(ButtonStyle.Primary)
         .setEmoji('🙋'),
       new ButtonBuilder()
@@ -194,12 +186,12 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       row.addComponents(
         new ButtonBuilder()
           .setCustomId('ticket_priority:low')
-          .setLabel('Low')
+          .setLabel('Alacsony')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('🔵'),
         new ButtonBuilder()
           .setCustomId('ticket_priority:high')
-          .setLabel('High')
+          .setLabel('Magas')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('🔴')
       );
@@ -238,10 +230,10 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
       service: 'ticketService',
       operation: 'createTicket',
       message: 'Ticket operation failed: createTicket',
-      userMessage: 'Failed to create ticket. Please try again in a moment.',
+      userMessage: 'Nem sikerült létrehozni a jegyet. Kérlek, próbáld újra később.',
       context: { guildId: guild?.id, userId: member?.id }
     });
-    logger.error('Error creating ticket:', {
+    logger.error('Hiba a jegy létrehozásakor:', {
       guildId: guild?.id,
       userId: member?.id,
       error: typedError.message,
@@ -255,11 +247,11 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
   }
 }
 
-export async function closeTicket(channel, closer, reason = 'No reason provided') {
+export async function closeTicket(channel, closer, reason = 'Nem lett megadva indok') {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
+      return { success: false, error: 'Ez nem egy jegy csatorna' };
     }
     
     const config = await getGuildConfig(channel.client, channel.guild.id);
@@ -283,10 +275,10 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
           await channel.setParent(closedCategoryId, { lockPermissions: false });
           movedToClosedCategory = true;
         } catch (moveError) {
-            logger.warn(`Could not move ticket ${channel.id} to closed category ${closedCategoryId}: ${moveError.message}`);
+            logger.warn(`Nem sikerült áthelyezni a(z) ${channel.id} jegyet a(z) ${closedCategoryId} lezárt kategóriába: ${moveError.message}`);
         }
       } else {
-        logger.warn(`Configured closed category is invalid for guild ${channel.guild.id}: ${closedCategoryId}`);
+        logger.warn(`A beállított lezárt kategória érvénytelen a(z) ${channel.guild.id} szerveren: ${closedCategoryId}`);
       }
     }
     
@@ -295,16 +287,16 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
         const ticketCreator = await channel.client.users.fetch(ticketData.userId).catch(() => null);
         if (ticketCreator) {
           const dmEmbed = createEmbed({
-            title: '🎫 Your Ticket Has Been Closed',
-            description: `Your ticket **${channel.name}** has been closed.\n\n**Reason:** ${reason}\n**Closed by:** ${closer.tag}\n**Closed at:** <t:${Math.floor(Date.now() / 1000)}:F>\n\nThank you for using our support system! If you have any further questions, feel free to create a new ticket.`,
+            title: '🎫 A jegyed be lett zárva',
+            description: `A(z) **${channel.name}** nevű jegyed be lett zárva.\n\n**Indok:** ${reason}\n**Bezárta:** ${closer.tag}\n**Ekkor:** <t:${Math.floor(Date.now() / 1000)}:F>\n\nKöszönjük, hogy igénybe vetted a támogatást! Ha további kérdésed van, nyugodtan nyiss egy új jegyet.`,
             color: '#e74c3c',
-            footer: { text: `Ticket ID: ${ticketData.id}` }
+            footer: { text: `Jegy ID: ${ticketData.id}` }
           });
           
           await ticketCreator.send({ embeds: [dmEmbed] });
         }
       } catch (dmError) {
-          logger.warn(`Could not send DM to ticket creator ${ticketData.userId}: ${dmError.message}`);
+          logger.warn(`Nem sikerült privát üzenetet küldeni a jegy létrehozójának (${ticketData.userId}): ${dmError.message}`);
       }
     }
     
@@ -327,26 +319,26 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
         }
       }
     } catch (permError) {
-        logger.warn(`Could not update user permissions for closed ticket: ${permError.message}`);
+        logger.warn(`Nem sikerült frissíteni a felhasználói jogokat a bezárt jegyhez: ${permError.message}`);
     }
     
     const messages = await channel.messages.fetch();
     const ticketMessage = messages.find(m => 
       m.embeds.length > 0 && 
-      m.embeds[0].title?.startsWith('Ticket #')
+      m.embeds[0].title?.startsWith('Jegy #')
     );
     
     if (ticketMessage) {
       const embed = ticketMessage.embeds[0];
-      const statusField = embed.fields?.find(f => f.name === 'Status');
+      const statusField = embed.fields?.find(f => f.name === 'Státusz');
       
       if (statusField) {
-        statusField.value = '🔴 Closed';
+        statusField.value = '🔴 Zárva';
       }
       
       const updatedEmbed = createEmbed({
-        title: embed.title || 'Ticket',
-        description: embed.description || 'Ticket discussion',
+        title: embed.title || 'Jegy',
+        description: embed.description || 'Jegy megbeszélés',
         color: '#e74c3c',
         fields: embed.fields || [],
         footer: embed.footer
@@ -354,26 +346,26 @@ export async function closeTicket(channel, closer, reason = 'No reason provided'
       
       await ticketMessage.edit({ 
         embeds: [updatedEmbed],
-components: []
+        components: []
       });
     }
     
     const closeEmbed = createEmbed({
-      title: 'Ticket Closed',
-      description: `This ticket has been closed by ${closer}.\n**Reason:** ${reason}${dmOnClose ? '\n\n📩 A DM has been sent to the ticket creator.' : ''}`,
+      title: 'Jegy Bezárva',
+      description: `Ezt a jegyet bezárta: ${closer}.\n**Indok:** ${reason}${dmOnClose ? '\n\n📩 Egy privát üzenet (DM) el lett küldve a jegy létrehozójának.' : ''}`,
       color: '#e74c3c',
-      footer: { text: `Ticket ID: ${ticketData.id}` }
+      footer: { text: `Jegy ID: ${ticketData.id}` }
     });
     
     const controlRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('ticket_reopen')
-        .setLabel('Reopen Ticket')
+        .setLabel('Jegy Újranyitása')
         .setStyle(ButtonStyle.Success)
         .setEmoji('🔓'),
       new ButtonBuilder()
         .setCustomId('ticket_delete')
-        .setLabel('Delete Ticket')
+        .setLabel('Jegy Törlése')
         .setStyle(ButtonStyle.Danger)
         .setEmoji('🗑️')
     );
@@ -405,10 +397,10 @@ components: []
       service: 'ticketService',
       operation: 'closeTicket',
       message: 'Ticket operation failed: closeTicket',
-      userMessage: 'Failed to close ticket. Please try again in a moment.',
+      userMessage: 'Nem sikerült bezárni a jegyet. Kérlek, próbáld újra később.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, closerId: closer?.id }
     });
-    logger.error('Error closing ticket:', {
+    logger.error('Hiba a jegy bezárásakor:', {
       guildId: channel?.guild?.id,
       channelId: channel?.id,
       userId: closer?.id,
@@ -427,13 +419,13 @@ export async function claimTicket(channel, claimer) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
+      return { success: false, error: 'Ez nem egy jegy csatorna' };
     }
     
     if (ticketData.claimedBy) {
       return { 
         success: false, 
-        error: `This ticket is already claimed by <@${ticketData.claimedBy}>` 
+        error: `Ezt a jegyet már elvállalta: <@${ticketData.claimedBy}>` 
       };
     }
     
@@ -445,12 +437,12 @@ export async function claimTicket(channel, claimer) {
     const messages = await channel.messages.fetch();
     const ticketMessage = messages.find(m => 
       m.embeds.length > 0 && 
-      m.embeds[0].title?.startsWith('Ticket #')
+      m.embeds[0].title?.startsWith('Jegy #')
     );
     
     if (ticketMessage) {
       const embed = ticketMessage.embeds[0];
-      const claimedField = embed.fields?.find(f => f.name === 'Claimed By');
+      const claimedField = embed.fields?.find(f => f.name === 'Feldolgozza');
       
       if (claimedField) {
         claimedField.value = claimer.toString();
@@ -459,18 +451,18 @@ export async function claimTicket(channel, claimer) {
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('ticket_close')
-          .setLabel('Close Ticket')
+          .setLabel('Jegy Zárása')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('🔒'),
         new ButtonBuilder()
           .setCustomId('ticket_claim')
-          .setLabel('Claimed')
+          .setLabel('Elvállalva')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('🙋')
           .setDisabled(true),
         new ButtonBuilder()
           .setCustomId('ticket_transcript')
-          .setLabel('Transcript')
+          .setLabel('Átirat')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('📜')
       );
@@ -482,22 +474,22 @@ export async function claimTicket(channel, claimer) {
     }
     
     const claimEmbed = createEmbed({
-      title: 'Ticket Claimed',
-      description: `🎉 ${claimer} has claimed this ticket!`,
+      title: 'Jegy Elvállalva',
+      description: `🎉 ${claimer} elvállalta ezt a jegyet!`,
       color: '#2ecc71'
     });
     
     const unclaimRow = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId('ticket_unclaim')
-        .setLabel('Unclaim')
+        .setLabel('Elengedés')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🔓')
     );
 
     const claimStatusMessage = messages.find(m =>
       m.embeds.length > 0 &&
-      (m.embeds[0].title === 'Ticket Claimed' || m.embeds[0].title === 'Ticket Unclaimed')
+      (m.embeds[0].title === 'Jegy Elvállalva' || m.embeds[0].title === 'Jegy Elengedve')
     );
 
     if (claimStatusMessage) {
@@ -528,10 +520,10 @@ export async function claimTicket(channel, claimer) {
       service: 'ticketService',
       operation: 'claimTicket',
       message: 'Ticket operation failed: claimTicket',
-      userMessage: 'Failed to claim ticket. Please try again in a moment.',
+      userMessage: 'Nem sikerült elvállalni a jegyet. Kérlek, próbáld újra később.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, claimerId: claimer?.id }
     });
-    logger.error('Error claiming ticket:', {
+    logger.error('Hiba a jegy elvállalásakor:', {
       guildId: channel?.guild?.id,
       channelId: channel?.id,
       userId: claimer?.id,
@@ -550,13 +542,13 @@ export async function reopenTicket(channel, reopener) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
+      return { success: false, error: 'Ez nem egy jegy csatorna' };
     }
     
     if (ticketData.status !== 'closed') {
       return { 
         success: false, 
-        error: 'This ticket is not currently closed' 
+        error: 'Ez a jegy jelenleg nincs bezárva' 
       };
     }
 
@@ -582,11 +574,11 @@ export async function reopenTicket(channel, reopener) {
           movedToOpenCategory = true;
         } catch (moveError) {
           openCategoryMoveFailed = true;
-          logger.warn(`Could not move reopened ticket ${channel.id} to open category ${openCategoryId}: ${moveError.message}`);
+          logger.warn(`Nem sikerült áthelyezni az újranyitott ${channel.id} jegyet a(z) ${openCategoryId} nyitott kategóriába: ${moveError.message}`);
         }
       } else {
         openCategoryMoveFailed = true;
-        logger.warn(`Configured open ticket category is invalid for guild ${channel.guild.id}: ${openCategoryId}`);
+        logger.warn(`A beállított nyitott jegy kategória érvénytelen a(z) ${channel.guild.id} szerveren: ${openCategoryId}`);
       }
     }
     
@@ -601,38 +593,38 @@ export async function reopenTicket(channel, reopener) {
         });
       }
     } catch (error) {
-      logger.warn(`Could not restore access for user ${ticketData.userId}:`, error.message);
+      logger.warn(`Nem sikerült visszaállítani a hozzáférést a(z) ${ticketData.userId} felhasználónak:`, error.message);
     }
     
     const messages = await channel.messages.fetch();
     const ticketMessage = messages.find(m => 
       m.embeds.length > 0 && 
-      m.embeds[0].title?.startsWith('Ticket #')
+      m.embeds[0].title?.startsWith('Jegy #')
     );
     
     if (ticketMessage) {
       const embed = ticketMessage.embeds[0];
-      const statusField = embed.fields?.find(f => f.name === 'Status');
+      const statusField = embed.fields?.find(f => f.name === 'Státusz');
       
       if (statusField) {
-        statusField.value = '🟢 Open';
+        statusField.value = '🟢 Nyitva';
       }
       
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('ticket_close')
-          .setLabel('Close Ticket')
+          .setLabel('Jegy Zárása')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('🔒'),
         new ButtonBuilder()
           .setCustomId('ticket_claim')
-          .setLabel(ticketData.claimedBy ? 'Claimed' : 'Claim')
+          .setLabel(ticketData.claimedBy ? 'Elvállalva' : 'Feldolgozás')
           .setStyle(ticketData.claimedBy ? ButtonStyle.Secondary : ButtonStyle.Primary)
           .setEmoji('🙋')
           .setDisabled(!!ticketData.claimedBy),
         new ButtonBuilder()
           .setCustomId('ticket_transcript')
-          .setLabel('Transcript')
+          .setLabel('Átirat')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('📜')
       );
@@ -644,14 +636,14 @@ export async function reopenTicket(channel, reopener) {
     }
     
     const reopenEmbed = createEmbed({
-      title: 'Ticket Reopened',
-      description: `🔓 ${reopener} has reopened this ticket!`,
+      title: 'Jegy Újranyitva',
+      description: `🔓 ${reopener} újranyitotta ezt a jegyet!`,
       color: '#2ecc71'
     });
 
     const closeStatusMessage = messages.find(m =>
       m.embeds.length > 0 &&
-      m.embeds[0].title === 'Ticket Closed' &&
+      m.embeds[0].title === 'Jegy Bezárva' &&
       m.components.length > 0 &&
       m.components[0].components.some(c => c.customId === 'ticket_reopen')
     );
@@ -674,10 +666,10 @@ export async function reopenTicket(channel, reopener) {
       service: 'ticketService',
       operation: 'reopenTicket',
       message: 'Ticket operation failed: reopenTicket',
-      userMessage: 'Failed to reopen ticket. Please try again in a moment.',
+      userMessage: 'Nem sikerült újranyitni a jegyet. Kérlek, próbáld újra később.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, reopenerId: reopener?.id }
     });
-    logger.error('Error reopening ticket:', {
+    logger.error('Hiba a jegy újranyitásakor:', {
       guildId: channel?.guild?.id,
       channelId: channel?.id,
       userId: reopener?.id,
@@ -696,14 +688,14 @@ export async function deleteTicket(channel, deleter) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
+      return { success: false, error: 'Ez nem egy jegy csatorna' };
     }
     
     const deleteEmbed = createEmbed({
-      title: 'Ticket Deleted',
-      description: `🗑️ This ticket will be permanently deleted in ${TICKET_DELETE_DELAY_SECONDS} seconds.`,
+      title: 'Jegy Törlése',
+      description: `🗑️ Ez a jegy véglegesen törlésre kerül ${TICKET_DELETE_DELAY_SECONDS} másodpercen belül.`,
       color: '#e74c3c',
-      footer: { text: `Ticket ID: ${ticketData.id}` }
+      footer: { text: `Jegy ID: ${ticketData.id}` }
     });
     
     await channel.send({ embeds: [deleteEmbed] });
@@ -725,10 +717,10 @@ export async function deleteTicket(channel, deleter) {
     
     setTimeout(async () => {
       try {
-        await channel.delete('Ticket deleted permanently');
-        logger.info(`Deleted ticket channel ${channel.name} (${channel.id})`);
+        await channel.delete('Jegy véglegesen törölve');
+        logger.info(`Törölt jegy csatorna: ${channel.name} (${channel.id})`);
       } catch (deleteError) {
-        logger.error(`Failed to delete ticket channel ${channel.id}:`, deleteError);
+        logger.error(`Nem sikerült törölni a(z) ${channel.id} jegy csatornát:`, deleteError);
       }
     }, TICKET_DELETE_DELAY_MS);
     
@@ -739,10 +731,10 @@ export async function deleteTicket(channel, deleter) {
       service: 'ticketService',
       operation: 'deleteTicket',
       message: 'Ticket operation failed: deleteTicket',
-      userMessage: 'Failed to delete ticket. Please try again in a moment.',
+      userMessage: 'Nem sikerült törölni a jegyet. Kérlek, próbáld újra később.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, deleterId: deleter?.id }
     });
-    logger.error('Error deleting ticket:', {
+    logger.error('Hiba a jegy törlésekor:', {
       guildId: channel?.guild?.id,
       channelId: channel?.id,
       userId: deleter?.id,
@@ -761,20 +753,20 @@ export async function unclaimTicket(channel, unclaimer) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
+      return { success: false, error: 'Ez nem egy jegy csatorna' };
     }
     
     if (!ticketData.claimedBy) {
       return { 
         success: false, 
-        error: 'This ticket is not currently claimed' 
+        error: 'Ez a jegy jelenleg nincs elvállalva' 
       };
     }
     
     if (ticketData.claimedBy !== unclaimer.id && !unclaimer.permissions.has(PermissionFlagsBits.ManageChannels)) {
       return { 
         success: false, 
-        error: 'You can only unclaim your own tickets or need Manage Channels permission.' 
+        error: 'Csak a saját jegyedet engedheted el, vagy "Csatornák kezelése" jog szükséges hozzá.' 
       };
     }
     
@@ -787,31 +779,31 @@ export async function unclaimTicket(channel, unclaimer) {
     const messages = await channel.messages.fetch();
     const ticketMessage = messages.find(m => 
       m.embeds.length > 0 && 
-      m.embeds[0].title?.startsWith('Ticket #')
+      m.embeds[0].title?.startsWith('Jegy #')
     );
     
     if (ticketMessage) {
       const embed = ticketMessage.embeds[0];
-      const claimedField = embed.fields?.find(f => f.name === 'Claimed By');
+      const claimedField = embed.fields?.find(f => f.name === 'Feldolgozza');
       
       if (claimedField) {
-        claimedField.value = 'Not claimed';
+        claimedField.value = 'Nincs kiosztva';
       }
       
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder()
           .setCustomId('ticket_close')
-          .setLabel('Close Ticket')
+          .setLabel('Jegy Zárása')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('🔒'),
         new ButtonBuilder()
           .setCustomId('ticket_claim')
-          .setLabel('Claim')
+          .setLabel('Feldolgozás')
           .setStyle(ButtonStyle.Primary)
           .setEmoji('🙋'),
         new ButtonBuilder()
           .setCustomId('ticket_transcript')
-          .setLabel('Transcript')
+          .setLabel('Átirat')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('📜')
       );
@@ -824,13 +816,13 @@ export async function unclaimTicket(channel, unclaimer) {
     
     const claimMessage = messages.find(m => 
       m.embeds.length > 0 && 
-      (m.embeds[0].title === 'Ticket Claimed' || m.embeds[0].title === 'Ticket Unclaimed')
+      (m.embeds[0].title === 'Jegy Elvállalva' || m.embeds[0].title === 'Jegy Elengedve')
     );
     
     if (claimMessage) {
       const unclaimEmbed = createEmbed({
-        title: 'Ticket Unclaimed',
-        description: `🔓 ${unclaimer} has unclaimed this ticket!`,
+        title: 'Jegy Elengedve',
+        description: `🔓 ${unclaimer} elengedte ezt a jegyet!`,
         color: '#f39c12'
       });
       
@@ -840,8 +832,8 @@ export async function unclaimTicket(channel, unclaimer) {
       });
     } else {
       const unclaimEmbed = createEmbed({
-        title: 'Ticket Unclaimed',
-        description: `🔓 ${unclaimer} has unclaimed this ticket!`,
+        title: 'Jegy Elengedve',
+        description: `🔓 ${unclaimer} elengedte ezt a jegyet!`,
         color: '#f39c12'
       });
       
@@ -870,10 +862,10 @@ export async function unclaimTicket(channel, unclaimer) {
       service: 'ticketService',
       operation: 'unclaimTicket',
       message: 'Ticket operation failed: unclaimTicket',
-      userMessage: 'Failed to unclaim ticket. Please try again in a moment.',
+      userMessage: 'Nem sikerült elengedni a jegyet. Kérlek, próbáld újra később.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, unclaimerId: unclaimer?.id }
     });
-    logger.error('Error unclaiming ticket:', {
+    logger.error('Hiba a jegy elengedésekor:', {
       guildId: channel?.guild?.id,
       channelId: channel?.id,
       userId: unclaimer?.id,
@@ -897,12 +889,12 @@ export async function updateTicketPriority(channel, priority, updater) {
   try {
     const ticketData = await getTicketData(channel.guild.id, channel.id);
     if (!ticketData) {
-      return { success: false, error: 'This is not a ticket channel' };
+      return { success: false, error: 'Ez nem egy jegy csatorna' };
     }
     
     const priorityInfo = PRIORITY_MAP[priority];
     if (!priorityInfo) {
-      return { success: false, error: 'Invalid priority level' };
+      return { success: false, error: 'Érvénytelen prioritási szint' };
     }
     
     ticketData.priority = priority;
@@ -923,22 +915,22 @@ export async function updateTicketPriority(channel, priority, updater) {
       try {
         await channel.setName(newName);
       } catch (nameError) {
-        logger.warn(`Could not update channel name for priority: ${nameError.message}`);
+        logger.warn(`Nem sikerült frissíteni a csatorna nevét a prioritáshoz: ${nameError.message}`);
       }
     }
     
     const messages = await channel.messages.fetch();
     const ticketMessage = messages.find(m => 
       m.embeds.length > 0 && 
-      m.embeds[0].title?.startsWith('Ticket #')
+      m.embeds[0].title?.startsWith('Jegy #')
     );
     
     if (ticketMessage) {
       const embed = ticketMessage.embeds[0];
       
       const updatedEmbed = createEmbed({
-        title: embed.title || 'Ticket',
-        description: embed.description?.split('\n**Priority:**')[0] + `\n**Priority:** ${priorityInfo.emoji} ${priorityInfo.label}`,
+        title: embed.title || 'Jegy',
+        description: embed.description?.split('\n**Prioritás:**')[0] + `\n**Prioritás:** ${priorityInfo.emoji} ${priorityInfo.label}`,
         color: priorityInfo.color,
         fields: embed.fields || [],
         footer: embed.footer
@@ -948,8 +940,8 @@ export async function updateTicketPriority(channel, priority, updater) {
     }
     
     const updateEmbed = createEmbed({
-      title: 'Priority Updated',
-      description: `📊 Ticket priority updated to **${priorityInfo.emoji} ${priorityInfo.label}** by ${updater}`,
+      title: 'Prioritás Frissítve',
+      description: `📊 A jegy prioritását frissítette **${priorityInfo.emoji} ${priorityInfo.label}** szintre ${updater}`,
       color: priorityInfo.color
     });
     
@@ -979,10 +971,10 @@ export async function updateTicketPriority(channel, priority, updater) {
       service: 'ticketService',
       operation: 'updateTicketPriority',
       message: 'Ticket operation failed: updateTicketPriority',
-      userMessage: 'Failed to update ticket priority. Please try again in a moment.',
+      userMessage: 'Nem sikerült frissíteni a jegy prioritását. Kérlek, próbáld újra később.',
       context: { guildId: channel?.guild?.id, channelId: channel?.id, updaterId: updater?.id, priority }
     });
-    logger.error('Error updating ticket priority:', {
+    logger.error('Hiba a jegy prioritásának frissítésekor:', {
       guildId: channel?.guild?.id,
       channelId: channel?.id,
       userId: updater?.id,
@@ -996,4 +988,3 @@ export async function updateTicketPriority(channel, priority, updater) {
     };
   }
 }
-      
