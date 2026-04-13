@@ -14,19 +14,19 @@ import ticketLimitsToggleDM from './modules/ticket_limits_toggle_dm.js';
 export default {
     data: new SlashCommandBuilder()
         .setName("ticket")
-        .setDescription("Manages the server's ticket system.")
+        .setDescription("A szerver ticket rendszerének kezelése.")
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
         .addSubcommand((subcommand) =>
             subcommand
                 .setName("setup")
                 .setDescription(
-                    "Sets up the ticket creation panel in a specified channel.",
+                    "Kezeli a szerver jegyrendszerét.",
                 )
                 .addChannelOption((option) =>
                     option
 .setName("panel_channel")
                         .setDescription(
-                            "The channel where the ticket panel will be sent.",
+                            "A csatorna, ahová a jegypanelt küldik.",
                         )
                         .addChannelTypes(ChannelType.GuildText)
                         .setRequired(true),
@@ -36,7 +36,7 @@ export default {
                     option
                         .setName("panel_message")
                         .setDescription(
-                            "The main message/description for the ticket panel.",
+                            "A jegypanel fő üzenete/leírása.",
                         )
                         .setRequired(true),
                 )
@@ -44,7 +44,7 @@ export default {
                     option
                         .setName("button_label")
                         .setDescription(
-                            "The label for the ticket creation button (default: Create Ticket)",
+                            "A jegykészítő gomb címkéje (alapértelmezett: Jegy létrehozása)",
                         )
                         .setRequired(false),
                 )
@@ -52,7 +52,7 @@ export default {
                     option
                         .setName("category")
                         .setDescription(
-                            "The category where new tickets will be created (optional).",
+                           "A kategória, ahol új jegyek jönnek létre (nem kötelező).",
                         )
                         .addChannelTypes(ChannelType.GuildCategory)
                         .setRequired(false),
@@ -61,7 +61,7 @@ export default {
                     option
                         .setName("closed_category")
                         .setDescription(
-                            "The category where closed tickets will be moved (optional).",
+                            "Az a kategória, ahová a zárt jegyeket áthelyezik (nem kötelező).",
                         )
                         .addChannelTypes(ChannelType.GuildCategory)
                         .setRequired(false),
