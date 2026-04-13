@@ -139,7 +139,7 @@ const createTicketModalHandler = {
         // --- JAVÍTOTT RÉSZ ---
         await interaction.editReply({
           embeds: [successEmbed(
-            'Ticket Created',
+            'Jegy Léterhozva',
             `A jegyed létrejött itt: ${result.channel}!`
           )]
         });
@@ -169,13 +169,13 @@ const closeTicketHandler = {
 
       const modal = new ModalBuilder()
         .setCustomId('ticket_close_modal')
-        .setTitle('Close Ticket');
+        .setTitle('Jegy lezárás');
 
       const reasonInput = new TextInputBuilder()
         .setCustomId('reason')
-        .setLabel('Reason for closing (optional)')
+        .setLabel('A bezárás oka (nem kötelező)')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Add an optional reason...')
+        .setPlaceholder('Ird le mért zárod a jegyed')
         .setRequired(false)
         .setMaxLength(1000);
 
@@ -235,7 +235,7 @@ const claimTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Claimed', 'You have successfully claimed this ticket!')],
+          embeds: [successEmbed('Jegyet átveszem', 'Sikeresen igényelte ezt a jegyet!')],
           flags: MessageFlags.Ephemeral
         });
       } else {
@@ -376,7 +376,7 @@ const deleteTicketHandler = {
       
       if (result.success) {
         await interaction.editReply({
-          embeds: [successEmbed('Ticket Deleted', 'Ez a jegy 3 másodpercen belül véglegesen törlődik.')],
+          embeds: [successEmbed('Jegy törölve', 'Ez a jegy 3 másodpercen belül véglegesen törlődik.')],
           flags: MessageFlags.Ephemeral
         });
       } else {
