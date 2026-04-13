@@ -95,7 +95,7 @@ const createTicketHandler = {
         .setCustomId('reason')
         .setLabel('Miért hozza létre ezt a jegyet?')
         .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder('Describe your issue...')
+        .setPlaceholder('Irja le a problémát...')
         .setRequired(true)
         .setMaxLength(1000);
 
